@@ -4,21 +4,24 @@
     <title>Bi-directional WebSocket Chat Demo</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="http://bit.ly/cdn-bootstrap-css" />
-    <link rel="stylesheet" href="http://bit.ly/cdn-bootstrap-theme" />
-    <script src="http://bit.ly/cdn-bootstrap-jq"></script>
-    <script>
-      // var ws = new WebSocket("ws://localhost:8181");
-      var ws = new WebSocket("https://flop-unvaried-suds.ngrok-free.dev/");
+    <link rel="stylesheet" href="https://bootstrapcdn.com" />
+    <script src="https://jquery.com"></script>
+    <script type="text/javascript">
+      // Automatically establishes communication relative to the browser address bar
+      var wsProtocol =
+        window.location.protocol === "https:" ? "wss://" : "ws://";
+      var ws = new WebSocket(wsProtocol + window.location.host);
       var nickname = "";
+
       ws.onopen = function (e) {
         console.log("Connection to server opened");
       };
+
       function appendLog(type, nickname, message) {
         var messages = document.getElementById("messages");
         var messageElem = document.createElement("li");
         var preface_label;
+
         if (type === "notification") {
           preface_label = '<span class="label label-info">*</span>';
         } else if (type == "nick_update") {
@@ -27,6 +30,7 @@
           preface_label =
             '<span class="label label-success">' + nickname + "</span>";
         }
+
         var message_text =
           "<h2>" + preface_label + "&nbsp;&nbsp;" + message + "</h2>";
         messageElem.innerHTML = message_text;
@@ -39,55 +43,48 @@
         appendLog(data.type, data.nickname, data.message);
         console.log("ID: [%s] = %s", data.id, data.message);
       };
+
       ws.onclose = function (e) {
-        appendLog("Connection closed", "", "connection closed");
-        console.log("Connection closed");
+        appendLog("notification", "System", "Connection closed");
       };
+
       function sendMessage() {
         var messageField = document.getElementById("message");
-        if (ws.readyState === WebSocket.OPEN) {
+        if (
+          ws.readyState === WebSocket.OPEN &&
+          messageField.value.trim() !== ""
+        ) {
           ws.send(messageField.value);
         }
         messageField.value = "";
         messageField.focus();
       }
+
       function disconnect() {
         ws.close();
       }
     </script>
   </head>
-  <body lang="en">
-    <div class="vertical-center">
-      <div class="container">
+  <body>
+    <div class="container" style="padding-top: 20px">
+      <h1>Bi-directional WebSocket Chat</h1>
+      <div class="well" style="height: 300px; overflow-y: scroll">
         <ul id="messages" class="list-unstyled"></ul>
-        <hr />
-        <form
-          role="form"
-          id="chat_form"
-          onsubmit="sendMessage(); return false;"
-        >
-          <div class="form-group">
-            <input
-              class="form-control"
-              type="text"
-              id="message"
-              name="message"
-              placeholder="Type text to echo in here"
-              value=""
-              autofocus
-            />
-          </div>
-          <button
-            type="button"
-            id="send"
-            class="btn btn-primary"
-            onclick="sendMessage();"
-          >
-            Send Message
-          </button>
-        </form>
+      </div>
+      <div class="form-inline">
+        <input
+          type="text"
+          id="message"
+          class="form-control"
+          style="width: 70%"
+          placeholder="Type message or /nick <name>"
+          onkeypress="if(event.keyCode==13) sendMessage();"
+        />
+        <button onclick="sendMessage()" class="btn btn-primary">Send</button>
+        <button onclick="disconnect()" class="btn btn-danger">
+          Disconnect
+        </button>
       </div>
     </div>
-    <script src="http://bit.ly/cdn-bootstrap-minjs"></script>
   </body>
 </html>
