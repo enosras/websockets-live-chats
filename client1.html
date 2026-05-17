@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Stock Chart over WebSocket</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="http://bit.ly/cdn-bootstrap-css" />
+    <link rel="stylesheet" href="http://bit.ly/cdn-bootstrap-theme" />
+    <script src="http://bit.ly/cdn-bootstrap-jq"></script>
+
+    <script type="text/javascript">
+      // Initialize WebSocket connection
+      var ws = new WebSocket("ws://localhost:8181");
+
+      // Keep track of the last known price to calculate trend changes
+      var priceCache = {};
+
+      // Connection opened: subscribe to all stock updates
+      ws.onopen = function (e) {
+        console.log("Connection open");
+
+        var stockRequest = {
+          stocks: ["AAPL", "MSFT", "AMZN", "GOOG", "YHOO"],
+        };
+
+        ws.send(JSON.stringify(stockRequest));
+      };
+
+      // Handle incoming price updates from the server
+      ws.onmessage = function (event) {
+        var stockUpdates = JSON.parse(event.data);
+
+        for (var symbol in stockUpdates) {
+          if (stockUpdates.hasOwnProperty(symbol)) {
+            var newPrice = stockUpdates[symbol];
+            var $label = $("#" + symbol + " .label");
+
+            // Check if we have a recorded previous price to compare against
+            if (priceCache[symbol] !== undefined) {
+              var oldPrice = priceCache[symbol];
+
+              if (newPrice > oldPrice) {
+                // Price increased: change color to green
+                $label
+                  .removeClass("label-default label-danger")
+                  .addClass("label-success");
+              } else if (newPrice < oldPrice) {
+                // Price decreased: change color to red
+                $label
+                  .removeClass("label-default label-success")
+                  .addClass("label-danger");
+              }
+            }
+
+            // Update the cached baseline price for the next comparison interval
+            priceCache[symbol] = newPrice;
+
+            // Render the numeric text value onto the UI
+            $label.text(newPrice.toFixed(2));
+          }
+        }
+      };
+
+      ws.onclose = function (e) {
+        console.log("Connection closed");
+      };
+    </script>
+    <!-- <script type="text/javascript"> -->
+    <!--   // code from chapter goes here -->
+    <!---->
+    <!--   // Initialize WebSocket connection -->
+    <!--   var ws = new WebSocket("ws://localhost:8181"); -->
+    <!---->
+    <!--   // 1. Connection opened: immediately tell the backend which stocks we want to watch -->
+    <!--   ws.onopen = function (e) { -->
+    <!--     console.log("Connection open"); -->
+    <!---->
+    <!--     var stockRequest = { -->
+    <!--       stocks: ["AAPL", "MSFT", "AMZN", "GOOG", "YHOO"], -->
+    <!--     }; -->
+    <!---->
+    <!--     ws.send(JSON.stringify(stockRequest)); -->
+    <!--   }; -->
+    <!---->
+    <!--   // 2. Handle incoming data updates from the server -->
+    <!--   ws.onmessage = function (event) { -->
+    <!--     var stockUpdates = JSON.parse(event.data); -->
+    <!--     console.log("Received update: ", stockUpdates); -->
+    <!---->
+    <!--     // Iterate through each stock symbol in the received payload -->
+    <!--     for (var symbol in stockUpdates) { -->
+    <!--       if (stockUpdates.hasOwnProperty(symbol)) { -->
+    <!--         var newPrice = stockUpdates[symbol].toFixed(2); -->
+    <!---->
+    <!--         // Target the specific cell span by its stock ID and update the visual text -->
+    <!--         $("#" + symbol + " .label").text(newPrice); -->
+    <!--       } -->
+    <!--     } -->
+    <!--   }; -->
+    <!---->
+    <!--   // Handle connection closures gracefully -->
+    <!--   ws.onclose = function (e) { -->
+    <!--     console.log("Connection closed"); -->
+    <!--   }; -->
+    <!-- </script> -->
+  </head>
+  <body lang="en">
+    <div class="vertical-center">
+      <div class="container">
+        <h1>Stock Chart over WebSocket</h1>
+        <table class="table" id="stockTable">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Price</th>
+            </tr>
+          </thead>
+          <tbody id="stockRows">
+            <tr>
+              <td><h3>AAPL</h3></td>
+              <td id="AAPL">
+                <h3><span class="label label-default">95.00</span></h3>
+              </td>
+            </tr>
+            <tr>
+              <td><h3>MSFT</h3></td>
+              <td id="MSFT">
+                <h3><span class="label label-default">50.00</span></h3>
+              </td>
+            </tr>
+            <tr>
+              <td><h3>AMZN</h3></td>
+              <td id="AMZN">
+                <h3><span class="label label-default">300.00</span></h3>
+              </td>
+            </tr>
+            <tr>
+              <td><h3>GOOG</h3></td>
+              <td id="GOOG">
+                <h3><span class="label label-default">550.00</span></h3>
+              </td>
+            </tr>
+            <tr>
+              <td><h3>YHOO</h3></td>
+              <td id="YHOO">
+                <h3><span class="label label-default">35.00</span></h3>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <script src="http://bit.ly/maxcdn-bootstrap-js"></script>
+  </body>
+</html>
