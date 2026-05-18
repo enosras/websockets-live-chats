@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Authenticated WebSocket Chat</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://bootstrapcdn.com" />
+    <script src="https://jquery.com"></script>
+    <script type="text/javascript">
+      var wsProtocol =
+        window.location.protocol === "https:" ? "wss://" : "ws://";
+      var ws = new WebSocket(wsProtocol + window.location.host);
+      var myNickname = "";
+
+      ws.onmessage = function (e) {
+        var data = JSON.parse(e.data);
+
+        if (data.type === "auth_success") {
+          myNickname = data.nickname;
+          $("#loginContainer").hide();
+          $("#chatContainer").show();
+          appendLog("notification", "System", data.message);
+        } else if (data.type === "auth_failure") {
+          alert(data.message);
+        } else {
+          appendLog(data.type, data.nickname, data.message);
+        }
+      };
+
+      function submitLogin() {
+        var user = $("#username").val();
+        var pass = $("#password").val();
+        ws.send(
+          JSON.stringify({
+            type: "login_attempt",
+            username: user,
+            password: pass,
+          }),
+        );
+      }
+
+      function appendLog(type, nickname, message) {
+        var messages = document.getElementById("messages");
+        var messageElem = document.createElement("li");
+        var preface;
+
+        if (type === "notification")
+          preface = '<span class="label label-info">*</span>';
+        else if (type == "nick_update")
+          preface = '<span class="label label-warning">*</span>';
+        else
+          preface = '<span class="label label-success">' + nickname + "</span>";
+
+        messageElem.innerHTML =
+          "<h2>" + preface + "&nbsp;&nbsp;" + message + "</h2>";
+        messages.appendChild(messageElem);
+        $("#chatWell").scrollTop($("#chatWell")[0].scrollHeight); // Auto-scroll
+      }
+
+      function sendMessage() {
+        var msgField = document.getElementById("message");
+        if (ws.readyState === WebSocket.OPEN && msgField.value.trim() !== "") {
+          ws.send(
+            JSON.stringify({ type: "chat_message", message: msgField.value }),
+          );
+        }
+        msgField.value = "";
+        msgField.focus();
+      }
+
+      ws.onclose = function () {
+        appendLog("notification", "System", "Disconnected from server.");
+      };
+    </script>
+  </head>
+  <body>
+    <div class="container" style="padding-top: 40px">
+      <!-- 1. LOGIN INTERFACE PANEL -->
+      <div
+        id="loginContainer"
+        class="panel panel-default"
+        style="max-width: 400px; margin: 0 auto; padding: 20px"
+      >
+        <h3>Chat Infrastructure Login</h3>
+        <hr />
+        <div class="form-group">
+          <label>Username (try 'admin')</label>
+          <input type="text" id="username" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label>Password (try 'password123')</label>
+          <input type="password" id="password" class="form-control" />
+        </div>
+        <button onclick="submitLogin()" class="btn btn-block btn-success">
+          Authenticate
+        </button>
+      </div>
+
+      <!-- 2. MAIN CHAT PANEL (Hidden until authenticated) -->
+      <div id="chatContainer" style="display: none">
+        <h1>Secure Chat Dashboard</h1>
+        <div
+          id="chatWell"
+          class="well"
+          style="height: 300px; overflow-y: scroll"
+        >
+          <ul id="messages" class="list-unstyled"></ul>
+        </div>
+        <div class="form-inline">
+          <input
+            type="text"
+            id="message"
+            class="form-control"
+            style="width: 70%"
+            placeholder="Type message..."
+            onkeypress="if(event.keyCode==13) sendMessage();"
+          />
+          <button onclick="sendMessage()" class="btn btn-primary">Send</button>
+          <button onclick="ws.close()" class="btn btn-danger">
+            Disconnect
+          </button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
